@@ -203,23 +203,17 @@ export function usePicoChat() {
         return
       }
 
-      // If the backend returns a localhost URL but we are accessing it via a LAN IP
-      // (e.g., from a mobile device during dev), rewrite the hostname to match.
+      // Always derive WebSocket URL from the current page origin so it works
+      // behind reverse proxies (e.g. Trapiche) where the gateway port isn't
+      // directly accessible. Keep the pathname from ws_url.
       let finalWsUrl = ws_url
       try {
         const parsedUrl = new URL(ws_url)
-        const isLocalHost =
-          parsedUrl.hostname === "localhost" ||
-          parsedUrl.hostname === "127.0.0.1" ||
-          parsedUrl.hostname === "0.0.0.0"
-        const isBrowserLocal =
-          window.location.hostname === "localhost" ||
-          window.location.hostname === "127.0.0.1"
-
-        if (isLocalHost && !isBrowserLocal) {
-          parsedUrl.hostname = window.location.hostname
-          finalWsUrl = parsedUrl.toString()
-        }
+        const proto = window.location.protocol === "https:" ? "wss:" : "ws:"
+        parsedUrl.protocol = proto
+        parsedUrl.hostname = window.location.hostname
+        parsedUrl.port = window.location.port
+        finalWsUrl = parsedUrl.toString()
       } catch (e) {
         console.warn("Could not parse ws_url:", e)
       }
