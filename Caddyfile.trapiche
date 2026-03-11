@@ -1,0 +1,8 @@
+:3000 {
+	# WebSocket traffic for Pico channel → gateway
+	@pico path /pico/*
+	reverse_proxy @pico localhost:18790
+
+	# Everything else → launcher dashboard
+	reverse_proxy localhost:18800
+}

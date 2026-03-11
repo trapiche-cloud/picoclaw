@@ -38,6 +38,8 @@ RUN CGO_ENABLED=0 go build -v -tags stdjson -o build/picoclaw-launcher ./web/bac
 # ============================================================
 # Stage 3: Minimal runtime
 # ============================================================
+FROM caddy:2-alpine AS caddy
+
 FROM alpine:3.23
 
 RUN apk add --no-cache ca-certificates tzdata
@@ -45,7 +47,9 @@ RUN apk add --no-cache ca-certificates tzdata
 # Copy both binaries to the same directory so the launcher finds picoclaw
 COPY --from=builder /src/build/picoclaw /usr/local/bin/picoclaw
 COPY --from=builder /src/build/picoclaw-launcher /usr/local/bin/picoclaw-launcher
+COPY --from=caddy /usr/bin/caddy /usr/local/bin/caddy
 
+COPY Caddyfile.trapiche /etc/caddy/Caddyfile
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

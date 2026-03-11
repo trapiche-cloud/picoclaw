@@ -1,7 +1,13 @@
 #!/bin/sh
 set -e
 
-# Run the launcher (web console) on port 3000.
-# The launcher auto-starts the picoclaw gateway as a subprocess
-# and serves the dashboard UI on /.
-exec picoclaw-launcher -port 3000 -public -no-browser
+# Start the launcher (web dashboard) on port 18800
+picoclaw-launcher -port 18800 -public -no-browser &
+
+# Wait for launcher to start (it auto-starts the gateway on 18790)
+sleep 2
+
+# Caddy on port 3000 unifies both:
+#   /pico/* → gateway:18790  (WebSocket)
+#   /*      → launcher:18800 (dashboard)
+exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
