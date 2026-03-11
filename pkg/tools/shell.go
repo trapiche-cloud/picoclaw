@@ -219,6 +219,25 @@ func (t *ExecTool) Execute(ctx context.Context, args map[string]any) *ToolResult
 		return ErrorResult(guardError)
 	}
 
+	// Re-resolve symlinks immediately before execution to shrink the TOCTOU window
+	// between validation and cmd.Dir assignment.
+	if t.restrictToWorkspace && t.workingDir != "" && cwd != t.workingDir {
+		resolved, err := filepath.EvalSymlinks(cwd)
+		if err != nil {
+			return ErrorResult(fmt.Sprintf("Command blocked by safety guard (path resolution failed: %v)", err))
+		}
+		absWorkspace, _ := filepath.Abs(t.workingDir)
+		wsResolved, _ := filepath.EvalSymlinks(absWorkspace)
+		if wsResolved == "" {
+			wsResolved = absWorkspace
+		}
+		rel, err := filepath.Rel(wsResolved, resolved)
+		if err != nil || !filepath.IsLocal(rel) {
+			return ErrorResult("Command blocked by safety guard (working directory escaped workspace)")
+		}
+		cwd = resolved
+	}
+
 	// timeout == 0 means no timeout
 	var cmdCtx context.Context
 	var cancel context.CancelFunc
