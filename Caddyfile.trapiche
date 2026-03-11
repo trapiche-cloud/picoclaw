@@ -1,0 +1,12 @@
+:3000 {
+	# Trapiche health check: GET / returns 200
+	@rootpath path /
+	handle @rootpath {
+		respond "ok" 200
+	}
+
+	# Everything else proxied to picoclaw gateway
+	handle {
+		reverse_proxy localhost:18790
+	}
+}
