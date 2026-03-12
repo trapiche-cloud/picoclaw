@@ -42,7 +42,7 @@ FROM caddy:2-alpine AS caddy
 
 FROM alpine:3.23
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata curl github-cli
 
 # Copy both binaries to the same directory so the launcher finds picoclaw
 COPY --from=builder /src/build/picoclaw /usr/local/bin/picoclaw
