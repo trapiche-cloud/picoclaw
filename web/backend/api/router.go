@@ -14,9 +14,15 @@ type Handler struct {
 	serverPublic         bool
 	serverPublicExplicit bool
 	serverCIDRs          []string
+	cookieSecret         []byte
 	oauthMu              sync.Mutex
 	oauthFlows           map[string]*oauthFlow
 	oauthState           map[string]string
+}
+
+// SetCookieSecret stores the decoded cookie secret for auth operations.
+func (h *Handler) SetCookieSecret(secret []byte) {
+	h.cookieSecret = secret
 }
 
 // NewHandler creates an instance of the API handler.
@@ -69,4 +75,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Launcher service parameters (port/public)
 	h.registerLauncherConfigRoutes(mux)
+
+	// Authentication
+	h.registerAuthRoutes(mux)
 }

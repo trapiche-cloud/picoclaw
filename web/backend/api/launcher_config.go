@@ -61,11 +61,14 @@ func (h *Handler) handleUpdateLauncherConfig(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	cfg := launcherconfig.Config{
-		Port:         payload.Port,
-		Public:       payload.Public,
-		AllowedCIDRs: append([]string(nil), payload.AllowedCIDRs...),
+	// Load existing config to preserve auth fields
+	cfg, err := h.loadLauncherConfig()
+	if err != nil {
+		cfg = launcherconfig.Config{}
 	}
+	cfg.Port = payload.Port
+	cfg.Public = payload.Public
+	cfg.AllowedCIDRs = append([]string(nil), payload.AllowedCIDRs...)
 	if err := launcherconfig.Validate(cfg); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

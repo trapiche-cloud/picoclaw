@@ -5,14 +5,18 @@ import {
   IconChevronsUp,
   IconKey,
   IconListDetails,
+  IconLogout,
   IconMessageCircle,
   IconSettings,
   IconSparkles,
   IconTools,
 } from "@tabler/icons-react"
-import { Link, useRouterState } from "@tanstack/react-router"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router"
 import * as React from "react"
 import { useTranslation } from "react-i18next"
+
+import { getAuthStatus, logout } from "@/api/auth"
 
 import {
   Collapsible,
@@ -68,7 +72,22 @@ const baseNavGroups: Omit<NavGroup, "items">[] = [
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const routerState = useRouterState()
   const { t } = useTranslation()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const currentPath = routerState.location.pathname
+
+  const { data: authStatus } = useQuery({
+    queryKey: ["authStatus"],
+    queryFn: getAuthStatus,
+    staleTime: 30_000,
+  })
+
+  const handleLogout = async () => {
+    await logout()
+    queryClient.invalidateQueries({ queryKey: ["authStatus"] })
+    navigate({ to: "/login" })
+  }
+
   const {
     channelItems,
     hasMoreChannels,
@@ -232,6 +251,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </Collapsible>
         ))}
       </SidebarContent>
+      {authStatus?.auth_enabled && (
+        <div className="border-t border-border/20 p-2">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={handleLogout}
+                className="text-muted-foreground hover:bg-muted/60 h-9 px-3"
+              >
+                <IconLogout className="size-4 opacity-60" />
+                <span className="opacity-80">{t("auth.logout")}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </div>
+      )}
       <SidebarRail />
     </Sidebar>
   )

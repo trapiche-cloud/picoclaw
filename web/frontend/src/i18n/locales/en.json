@@ -492,5 +492,15 @@
       "clear": "Clear logs",
       "empty": "Waiting for logs..."
     }
+  },
+  "auth": {
+    "loginTitle": "Sign In",
+    "loginDescription": "Enter your credentials to access PicoClaw.",
+    "username": "Username",
+    "password": "Password",
+    "loginButton": "Sign In",
+    "loggingIn": "Signing in...",
+    "loginError": "Invalid username or password.",
+    "logout": "Sign Out"
   }
 }

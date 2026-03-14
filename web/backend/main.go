@@ -12,6 +12,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -84,6 +85,24 @@ func main() {
 		launcherCfg = launcherconfig.Default()
 	}
 
+	// Bootstrap auth credentials if needed when running in public mode
+	if *public || launcherCfg.Public {
+		if pw, changed := launcherconfig.EnsureAuthBootstrapped(&launcherCfg); changed {
+			if err := launcherconfig.Save(launcherPath, launcherCfg); err != nil {
+				log.Printf("Warning: Failed to save bootstrapped auth config: %v", err)
+			}
+			if pw != "" {
+				fmt.Println()
+				fmt.Println("  ============================================")
+				fmt.Println("  Authentication has been enabled automatically")
+				fmt.Printf("  Username: %s\n", launcherCfg.AuthUsername)
+				fmt.Printf("  Password: %s\n", pw)
+				fmt.Println("  ============================================")
+				fmt.Println()
+			}
+		}
+	}
+
 	effectivePort := *port
 	effectivePublic := *public
 	if !explicitPort {
@@ -115,6 +134,17 @@ func main() {
 	// API Routes (e.g. /api/status)
 	apiHandler := api.NewHandler(absPath)
 	apiHandler.SetServerOptions(portNum, effectivePublic, explicitPublic, launcherCfg.AllowedCIDRs)
+
+	// Set up auth cookie secret
+	if launcherCfg.AuthCookieSecret != "" {
+		secret, err := hex.DecodeString(launcherCfg.AuthCookieSecret)
+		if err != nil {
+			log.Printf("Warning: Invalid cookie secret: %v", err)
+		} else {
+			apiHandler.SetCookieSecret(secret)
+		}
+	}
+
 	apiHandler.RegisterRoutes(mux)
 
 	// Frontend Embedded Assets
@@ -125,10 +155,20 @@ func main() {
 		log.Fatalf("Invalid allowed CIDR configuration: %v", err)
 	}
 
+	// Optionally wrap with auth middleware
+	var authedMux http.Handler = accessControlledMux
+	if launcherCfg.AuthEnabled && launcherCfg.AuthCookieSecret != "" {
+		secret, err := hex.DecodeString(launcherCfg.AuthCookieSecret)
+		if err != nil {
+			log.Fatalf("Invalid auth cookie secret: %v", err)
+		}
+		authedMux = middleware.SessionAuth(secret, accessControlledMux)
+	}
+
 	// Apply middleware stack
 	handler := middleware.Recoverer(
 		middleware.Logger(
-			middleware.JSONContentType(accessControlledMux),
+			middleware.JSONContentType(authedMux),
 		),
 	)
 
